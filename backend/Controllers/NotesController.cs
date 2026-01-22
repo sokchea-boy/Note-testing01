@@ -2,11 +2,14 @@ using Microsoft.AspNetCore.Mvc;
 using backend.Models;
 using System.Data;
 using Dapper;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace backend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class NotesController : ControllerBase
 {
     private readonly IDbConnection _db;
@@ -19,8 +22,10 @@ public class NotesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetNotes(string? search = null, string? sortBy = "createdAt", string? sortOrder = "desc")
     {
-        var query = "SELECT * FROM Notes WHERE 1=1";
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var query = "SELECT * FROM Notes WHERE UserId = @UserId";
         var parameters = new DynamicParameters();
+        parameters.Add("@UserId", userId);
 
         if (!string.IsNullOrEmpty(search))
         {
@@ -37,7 +42,8 @@ public class NotesController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetNote(int id)
     {
-        var note = await _db.QueryFirstOrDefaultAsync<Note>("SELECT * FROM Notes WHERE Id = @Id", new { Id = id });
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var note = await _db.QueryFirstOrDefaultAsync<Note>("SELECT * FROM Notes WHERE Id = @Id AND UserId = @UserId", new { Id = id, UserId = userId });
         if (note == null) return NotFound();
         return Ok(note);
     }
@@ -45,8 +51,10 @@ public class NotesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateNote([FromBody] Note note)
     {
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
         note.CreatedAt = DateTime.UtcNow;
         note.UpdatedAt = DateTime.UtcNow;
+        note.UserId = userId;
 
         var sql = "INSERT INTO Notes (Title, Content, CreatedAt, UpdatedAt, UserId) VALUES (@Title, @Content, @CreatedAt, @UpdatedAt, @UserId); SELECT last_insert_rowid();";
         var id = await _db.ExecuteScalarAsync<int>(sql, note);
@@ -57,11 +65,12 @@ public class NotesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateNote(int id, [FromBody] Note note)
     {
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
         note.Id = id;
         note.UpdatedAt = DateTime.UtcNow;
 
-        var sql = "UPDATE Notes SET Title = @Title, Content = @Content, UpdatedAt = @UpdatedAt WHERE Id = @Id";
-        var affectedRows = await _db.ExecuteAsync(sql, note);
+        var sql = "UPDATE Notes SET Title = @Title, Content = @Content, UpdatedAt = @UpdatedAt WHERE Id = @Id AND UserId = @UserId";
+        var affectedRows = await _db.ExecuteAsync(sql, new { note.Title, note.Content, note.UpdatedAt, Id = id, UserId = userId });
         if (affectedRows == 0) return NotFound();
         return NoContent();
     }
@@ -69,7 +78,8 @@ public class NotesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteNote(int id)
     {
-        var affectedRows = await _db.ExecuteAsync("DELETE FROM Notes WHERE Id = @Id", new { Id = id });
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var affectedRows = await _db.ExecuteAsync("DELETE FROM Notes WHERE Id = @Id AND UserId = @UserId", new { Id = id, UserId = userId });
         if (affectedRows == 0) return NotFound();
         return NoContent();
     }

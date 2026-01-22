@@ -3,7 +3,13 @@ import type { Note, CreateNoteDto, UpdateNoteDto } from '@/types'
 const API_BASE_URL = 'https://localhost:5001/api/notes'
 
 export async function fetchNotesApi(): Promise<Note[]> {
-  const response = await fetch(API_BASE_URL)
+  const headers: Record<string, string> = {}
+  const token = localStorage.getItem('token')
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
+  const response = await fetch(API_BASE_URL, {
+    headers
+  })
   if (!response.ok) {
     throw new Error('Failed to fetch notes')
   }
@@ -11,11 +17,13 @@ export async function fetchNotesApi(): Promise<Note[]> {
 }
 
 export async function createNoteApi(dto: CreateNoteDto): Promise<Note> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const token = localStorage.getItem('token')
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
   const response = await fetch(API_BASE_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    headers,
     body: JSON.stringify(dto)
   })
   if (!response.ok) {
@@ -25,11 +33,13 @@ export async function createNoteApi(dto: CreateNoteDto): Promise<Note> {
 }
 
 export async function updateNoteApi(id: string, dto: UpdateNoteDto): Promise<Note> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const token = localStorage.getItem('token')
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
   const response = await fetch(`${API_BASE_URL}/${id}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    headers,
     body: JSON.stringify(dto)
   })
   if (!response.ok) {
@@ -39,8 +49,13 @@ export async function updateNoteApi(id: string, dto: UpdateNoteDto): Promise<Not
 }
 
 export async function deleteNoteApi(id: string): Promise<void> {
+  const headers: Record<string, string> = {}
+  const token = localStorage.getItem('token')
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
   const response = await fetch(`${API_BASE_URL}/${id}`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    headers
   })
   if (!response.ok) {
     throw new Error('Failed to delete note')
@@ -48,7 +63,13 @@ export async function deleteNoteApi(id: string): Promise<void> {
 }
 
 export async function getNoteByIdApi(id: string): Promise<Note> {
-  const response = await fetch(`${API_BASE_URL}/${id}`)
+  const headers: Record<string, string> = {}
+  const token = localStorage.getItem('token')
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
+  const response = await fetch(`${API_BASE_URL}/${id}`, {
+    headers
+  })
   if (!response.ok) {
     throw new Error('Failed to fetch note')
   }
