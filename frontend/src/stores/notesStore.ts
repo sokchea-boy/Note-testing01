@@ -44,14 +44,16 @@ export const useNotesStore = defineStore('notes', {
         this.loading = false
       }
     },
-    async createNote(dto: CreateNoteDto) {
+    async createNote(dto: CreateNoteDto): Promise<Note> {
       this.loading = true
       this.error = ''
       try {
         const newNote = await createNoteApi(dto)
         this.notes.push(newNote)
+        return newNote
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Failed to create note'
+        throw error
       } finally {
         this.loading = false
       }
